@@ -1,1 +1,34 @@
 project_id = "wjmqcwkufdrpuzpufkmf"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[functions.generate-study-materials]
+verify_jwt = true
+
+[functions.homework-helper]
+verify_jwt = true
+
+[functions.paypal-webhook]
+verify_jwt = false
