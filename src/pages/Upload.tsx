@@ -1,21 +1,28 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useStudyMaterials } from "@/hooks/useStudyMaterials";
+import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { 
   Upload as UploadIcon, 
   FileText, 
   Image, 
   FileUp,
   X,
-  Check,
   Loader2,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from "lucide-react";
 
 const Upload = () => {
+  const navigate = useNavigate();
+  const { hasAccess, freeCredits, isSubscribed } = useAuth();
+  const { uploadAndGenerate, loading } = useStudyMaterials();
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -35,10 +42,17 @@ const Upload = () => {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleProcess = () => {
-    setIsProcessing(true);
-    // TODO: Implement AI processing
-    setTimeout(() => setIsProcessing(false), 2000);
+  const handleProcess = async () => {
+    if (!hasAccess) {
+      setShowSubscriptionModal(true);
+      return;
+    }
+
+    const materialId = await uploadAndGenerate(files);
+    if (materialId) {
+      setFiles([]);
+      navigate(`/quizzes/${materialId}`);
+    }
   };
 
   const getFileIcon = (type: string) => {
@@ -60,12 +74,27 @@ const Upload = () => {
           </p>
         </div>
 
+        {/* Credits Banner */}
+        {!isSubscribed && (
+          <div className={`mb-6 p-4 rounded-xl ${freeCredits > 0 ? 'bg-primary-light border-primary/20' : 'bg-warning-light border-warning/30'} border flex items-start gap-3`}>
+            <AlertCircle className={`w-5 h-5 ${freeCredits > 0 ? 'text-primary' : 'text-warning'} mt-0.5 flex-shrink-0`} />
+            <div>
+              <h4 className="font-medium text-foreground mb-1">
+                {freeCredits > 0 ? `${freeCredits} free generation remaining` : "Free trial used"}
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                {freeCredits > 0 
+                  ? "This will use your free credit to generate quizzes, flashcards, and more."
+                  : "Subscribe to continue generating study materials."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Upload Zone */}
         <div
           className={`relative rounded-2xl border-2 border-dashed transition-all p-8 lg:p-12 text-center ${
-            isDragging 
-              ? "border-primary bg-primary-light" 
-              : "border-border hover:border-primary/50 bg-card"
+            isDragging ? "border-primary bg-primary-light" : "border-border hover:border-primary/50 bg-card"
           }`}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
@@ -83,50 +112,35 @@ const Upload = () => {
             <UploadIcon className="w-8 h-8 text-primary" />
           </div>
           
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            Drag & drop files here
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            or click to browse your computer
-          </p>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Drag & drop files here</h3>
+          <p className="text-muted-foreground mb-4">or click to browse your computer</p>
           
           <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
             <span className="px-3 py-1 rounded-full bg-muted">PDF</span>
             <span className="px-3 py-1 rounded-full bg-muted">Images</span>
             <span className="px-3 py-1 rounded-full bg-muted">Text files</span>
-            <span className="px-3 py-1 rounded-full bg-muted">Word docs</span>
           </div>
         </div>
 
         {/* File List */}
         {files.length > 0 && (
           <div className="mt-6">
-            <h3 className="text-sm font-medium text-foreground mb-3">
-              Files to process ({files.length})
-            </h3>
+            <h3 className="text-sm font-medium text-foreground mb-3">Files to process ({files.length})</h3>
             <div className="space-y-2">
               {files.map((file, index) => {
                 const FileIcon = getFileIcon(file.type);
                 return (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-4 rounded-xl bg-card border border-border"
-                  >
+                  <div key={index} className="flex items-center justify-between p-4 rounded-xl bg-card border border-border">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center">
                         <FileIcon className="w-5 h-5 text-primary" />
                       </div>
                       <div>
                         <p className="font-medium text-foreground text-sm">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
+                        <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => removeFile(index)}
-                      className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
-                    >
+                    <button onClick={() => removeFile(index)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
@@ -139,57 +153,19 @@ const Upload = () => {
         {/* Actions */}
         {files.length > 0 && (
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <Button 
-              variant="hero" 
-              size="lg" 
-              className="flex-1"
-              onClick={handleProcess}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Processing with AI...
-                </>
+            <Button variant="hero" size="lg" className="flex-1" onClick={handleProcess} disabled={loading}>
+              {loading ? (
+                <><Loader2 className="w-5 h-5 animate-spin" />Processing with AI...</>
               ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  Generate Study Materials
-                </>
+                <><Sparkles className="w-5 h-5" />Generate Study Materials</>
               )}
             </Button>
-            <Button 
-              variant="outline" 
-              size="lg"
-              onClick={() => setFiles([])}
-            >
-              Clear All
-            </Button>
+            <Button variant="outline" size="lg" onClick={() => setFiles([])}>Clear All</Button>
           </div>
         )}
-
-        {/* What happens next */}
-        <div className="mt-12 p-6 rounded-2xl bg-muted/50 border border-border">
-          <h3 className="font-semibold text-foreground mb-4">What happens next?</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { step: "1", title: "AI Extracts Content", desc: "We analyze your documents and extract key information" },
-              { step: "2", title: "Generate Resources", desc: "AI creates quizzes, flashcards, and cheat sheets" },
-              { step: "3", title: "Start Studying", desc: "Access your personalized study materials instantly" },
-            ].map((item, i) => (
-              <div key={i} className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm flex-shrink-0">
-                  {item.step}
-                </div>
-                <div>
-                  <h4 className="font-medium text-foreground text-sm mb-1">{item.title}</h4>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
+
+      <SubscriptionModal open={showSubscriptionModal} onOpenChange={setShowSubscriptionModal} />
     </DashboardLayout>
   );
 };
