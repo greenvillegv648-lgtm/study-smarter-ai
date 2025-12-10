@@ -14,7 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      homework_requests: {
+        Row: {
+          created_at: string
+          id: string
+          question: string
+          response: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          question: string
+          response?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          question?: string
+          response?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          free_credits: number
+          full_name: string | null
+          id: string
+          paypal_subscription_id: string | null
+          subscription_plan: string | null
+          subscription_status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          free_credits?: number
+          full_name?: string | null
+          id: string
+          paypal_subscription_id?: string | null
+          subscription_plan?: string | null
+          subscription_status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          free_credits?: number
+          full_name?: string | null
+          id?: string
+          paypal_subscription_id?: string | null
+          subscription_plan?: string | null
+          subscription_status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      study_materials: {
+        Row: {
+          cheat_sheet: Json | null
+          created_at: string
+          extracted_content: string | null
+          file_name: string
+          file_type: string
+          file_url: string | null
+          flashcards: Json | null
+          id: string
+          predictions: Json | null
+          quizzes: Json | null
+          user_id: string
+        }
+        Insert: {
+          cheat_sheet?: Json | null
+          created_at?: string
+          extracted_content?: string | null
+          file_name: string
+          file_type: string
+          file_url?: string | null
+          flashcards?: Json | null
+          id?: string
+          predictions?: Json | null
+          quizzes?: Json | null
+          user_id: string
+        }
+        Update: {
+          cheat_sheet?: Json | null
+          created_at?: string
+          extracted_content?: string | null
+          file_name?: string
+          file_type?: string
+          file_url?: string | null
+          flashcards?: Json | null
+          id?: string
+          predictions?: Json | null
+          quizzes?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
